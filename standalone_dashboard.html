@@ -1,0 +1,382 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Campus Analytics Console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: left rail navigation + scrolling workspace; rail collapses to a top tab strip on phones */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --surface2:#eef1f4; --ink:#16212b; --ink2:#4a5866; --muted:#7a8794; --line:#dde3e8;
+  --accent:#1f5f8b; --accent-ink:#ffffff; --accent-soft:#dcebf5;
+  --c1:#1f5f8b; --c2:#d9822b; --c3:#2f8f6b; --c4:#8a5fb0; --c5:#c4455a; --c6:#6b7a8a;
+  --good:#217a55; --warn:#a96a0a; --bad:#b3322f; --good-bg:#dff1e8; --warn-bg:#fbefd6; --bad-bg:#f8dfde;
+  --grid:#e6eaee;
+  --font-display:'Bricolage Grotesque',system-ui,sans-serif; --font-body:'Source Sans 3',system-ui,sans-serif; --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f161d; --surface:#17212b; --surface2:#1e2a36; --ink:#e7edf2; --ink2:#a9b6c2; --muted:#7f8d9a; --line:#2a3744;
+  --accent:#6bb4e6; --accent-ink:#0b1721; --accent-soft:#1d3447;
+  --c1:#6bb4e6; --c2:#eba35a; --c3:#5ec49b; --c4:#b78fe0; --c5:#ec7f92; --c6:#92a1b0;
+  --good:#5ec49b; --warn:#eba35a; --bad:#ee8581; --good-bg:#183a2d; --warn-bg:#3c2e14; --bad-bg:#432220; --grid:#243240; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161d; --surface:#17212b; --surface2:#1e2a36; --ink:#e7edf2; --ink2:#a9b6c2; --muted:#7f8d9a; --line:#2a3744;
+  --accent:#6bb4e6; --accent-ink:#0b1721; --accent-soft:#1d3447;
+  --c1:#6bb4e6; --c2:#eba35a; --c3:#5ec49b; --c4:#b78fe0; --c5:#ec7f92; --c6:#92a1b0;
+  --good:#5ec49b; --warn:#eba35a; --bad:#ee8581; --good-bg:#183a2d; --warn-bg:#3c2e14; --bad-bg:#432220; --grid:#243240; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--font-body);margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100vh}
+.rail{background:var(--surface);border-right:1px solid var(--line);padding:20px 12px;position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;gap:6px}
+.brand{font:700 18px/1.15 var(--font-display);padding:4px 10px 16px}
+.brand small{display:block;font:500 11px var(--font-mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
+.nav{all:unset;box-sizing:border-box;cursor:pointer;padding:9px 12px;border-radius:6px;color:var(--ink2);font-weight:500;display:block}
+.nav:hover{background:var(--surface2)}
+.nav[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.rail .spacer{flex:1}
+.main{padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));min-width:0;max-width:1180px;width:100%}
+.topbar{display:flex;gap:12px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin-bottom:20px}
+h1{font:700 26px/1.15 var(--font-display);margin:0;text-wrap:balance}
+.sub{color:var(--ink2);margin:4px 0 0}
+.btn{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:7px 12px;font-weight:500}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.08)}
+.grid{display:grid;gap:16px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.kpi .l{font:500 11px var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.kpi .v{font:700 30px/1.2 var(--font-display);font-variant-numeric:tabular-nums;margin-top:4px}
+.kpi .n{color:var(--ink2);font-size:13px}
+.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.card h2{font:600 15px var(--font-display);margin:0 0 2px}
+.card .hint{color:var(--muted);font-size:13px;margin:0 0 12px}
+.chart{position:relative;height:280px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:end}
+.filters label{display:flex;flex-direction:column;gap:3px;font:500 11px var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.filters input,.filters select{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:150px;text-transform:none;letter-spacing:0;font:15px var(--font-body);color:var(--ink)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font:500 11px var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--surface2);cursor:default}
+th.s{cursor:pointer}th.s:hover{color:var(--ink)}
+tr:last-child td{border-bottom:0}
+tbody tr.click{cursor:pointer}tbody tr.click:hover{background:var(--surface2)}
+td.num,th.num{text-align:right}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600}
+.pill.good{background:var(--good-bg);color:var(--good)}.pill.warn{background:var(--warn-bg);color:var(--warn)}.pill.bad{background:var(--bad-bg);color:var(--bad)}.pill.mute{background:var(--surface2);color:var(--ink2)}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px;color:var(--ink2);font-size:14px}
+.bar{height:6px;background:var(--surface2);border-radius:3px;min-width:70px;overflow:hidden}.bar i{display:block;height:100%;background:var(--accent)}
+.drawer{position:fixed;inset:0;background:rgba(10,16,22,.5);display:flex;justify-content:flex-end;z-index:20}
+.drawer .panel{background:var(--surface);width:min(460px,100%);height:100%;overflow:auto;padding:20px max(16px,env(safe-area-inset-right,0px)) 24px 20px;border-left:1px solid var(--line)}
+.panel h3{font:700 20px var(--font-display);margin:0}
+.panel h4{font:500 11px var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:20px 0 6px}
+textarea{width:100%;min-height:110px;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px;font:13px var(--font-mono);color:var(--ink)}
+.msg{padding:10px 12px;border-radius:6px;margin-top:10px;font-size:14px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink2);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.note{color:var(--muted);font-size:13px}
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static;height:auto;flex-direction:row;overflow-x:auto;padding:8px max(16px,env(safe-area-inset-left,0px));border-right:0;border-bottom:1px solid var(--line);gap:4px;align-items:center}
+  .brand,.rail .spacer{display:none}.nav{white-space:nowrap}
+  h1{font-size:22px}
+}
+@media (prefers-reduced-motion:no-preference){.view{animation:in .18s ease-out}@keyframes in{from{opacity:.4}to{opacity:1}}}
+</style>
+
+<div class="app">
+  <nav class="rail" aria-label="Sections" id="rail"></nav>
+  <main class="main"><div id="view" class="view"></div></main>
+</div>
+<div id="drawerHost"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+/* ---------- Synthetic data (same rules as seed_data.py; sample is regenerated in-browser) ---------- */
+const DEPTS=["Computer Engineering","Information Technology","AI & Data Science","Electronics","Mechanical","Civil"];
+const SUBJECTS=["Database Management Systems","Computer Networks","Operating Systems","Data Structures","Software Engineering","Big Data Analytics","Web Programming","Artificial Intelligence","Cloud Computing","Cyber Security"];
+const FIRST=["Aarav","Aditi","Aditya","Ananya","Arjun","Diya","Ishaan","Kavya","Neha","Rohan","Sai","Sana","Vedant","Priya","Om","Meera","Rahul","Sneha","Yash","Pooja"];
+const LAST=["Patil","Shinde","More","Naik","Desai","Kulkarni","Jadhav","Sawant","Pawar","Kadam","Joshi","Mane","Chavan","Pujari","Rane"];
+const COMPANIES=["BluePeak Systems","Nexora Technologies","BrightLayer Labs","CloudNest Solutions","DataSpring Analytics","Vertex Digital","Northstar Software","OrbitStack","PixelForge","Cedarline Tech","AsterByte","Maplewave Consulting"];
+const ROLES=["Software Developer","Data Analyst","QA Engineer","Cloud Support Engineer","Business Analyst","Junior Data Engineer","Network Engineer"];
+let seed=42;const rnd=()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const pick=a=>a[Math.floor(rnd()*a.length)];
+const gauss=(m,s)=>{let u=0,v=0;while(!u)u=rnd();while(!v)v=rnd();return m+s*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+const r1=x=>Math.round(x*10)/10,r2=x=>Math.round(x*100)/100;
+let DB;
+function seedData(n=500){
+  seed=42;DB={students:[],attendance:[],exams:[],placements:[]};
+  for(let i=1;i<=n;i++){
+    const dept=DEPTS[(i-1)%6],batch=pick([2022,2023,2024,2025]),sem=pick([3,4,5,6,7,8]);
+    const cgpa=r2(Math.max(3.2,Math.min(9.8,gauss(7.1,1.05))));
+    const elig=sem>=7&&cgpa>=6&&rnd()>0.08;
+    const code=dept.slice(0,2).toUpperCase().replace(/[ &]/g,"");
+    const id=`${code}${batch}${String(i).padStart(4,"0")}`;
+    DB.students.push({student_id:id,name:pick(FIRST)+" "+pick(LAST),department:dept,batch,semester:sem,cgpa,placement_eligible:elig,active:true});
+    const pool=[...SUBJECTS].sort(()=>rnd()-.5).slice(0,4);
+    for(const s of pool){
+      const held=pick([28,30,32,36,40]);const pct=r1(Math.max(35,Math.min(100,gauss(78,12))));
+      const att=Math.round(held*pct/100);
+      DB.attendance.push({student_id:id,department:dept,subject:s,academic_year:`${batch}-${batch+1}`,classes_held:held,classes_attended:att,attendance_percentage:r1(att/held*100)});
+      const marks=Math.round(Math.max(0,Math.min(100,gauss(62+(cgpa-6.5)*4,15))));
+      DB.exams.push({student_id:id,department:dept,semester:sem,subject:s,academic_year:`${batch}-${batch+1}`,marks_obtained:marks,maximum_marks:100,percentage:marks,result:marks>=40?"Pass":"Fail"});
+    }
+    if(elig){const r=rnd();let st,co="",jr="",sal=0;
+      if(r<.58){st="Placed";co=pick(COMPANIES);jr=pick(ROLES);sal=300000+25000*Math.floor(rnd()*32)}
+      else if(r<.76)st="In Process";else st="Not Placed";
+      DB.placements.push({student_id:id,department:dept,batch,academic_year:`${batch}-${batch+1}`,company:co,job_role:jr,status:st,annual_salary:sal});}
+  }
+}
+seedData();
+
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const fmt=(n,d=1)=>Number(n).toLocaleString("en-IN",{maximumFractionDigits:d,minimumFractionDigits:d});
+const inr=n=>"₹"+Math.round(n).toLocaleString("en-IN");
+const lakh=n=>"₹"+(n/100000).toFixed(2)+" L";
+const groupBy=(a,f)=>{const m=new Map();a.forEach(x=>{const k=f(x);if(!m.has(k))m.set(k,[]);m.get(k).push(x)});return m};
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const short=d=>({"Computer Engineering":"Computer","Information Technology":"IT","AI & Data Science":"AI & DS"}[d]||d);
+let charts=[];
+function killCharts(){charts.forEach(c=>c.destroy());charts=[]}
+function mk(id,cfg){
+  const ink=css("--ink2"),grid=css("--grid");
+  Chart.defaults.font.family="'Source Sans 3',system-ui,sans-serif";Chart.defaults.color=ink;
+  cfg.options=Object.assign({responsive:true,maintainAspectRatio:false},cfg.options||{});
+  const o=cfg.options;o.plugins=Object.assign({legend:{display:false}},o.plugins||{});
+  if(cfg.type!=="doughnut"){
+    o.scales=o.scales||{};
+    for(const ax of ["x","y"]){o.scales[ax]=Object.assign({grid:{color:ax==="y"?grid:"transparent"},border:{display:false},ticks:{color:ink}},o.scales[ax]||{});}
+  }
+  charts.push(new Chart($("#"+id),cfg));
+}
+const bars=(labels,data,color,extra={})=>({type:"bar",data:{labels,datasets:[{data,backgroundColor:color,borderRadius:3,maxBarThickness:36}]},options:extra});
+
+/* ---------- views ---------- */
+const VIEWS={dashboard:"Dashboard",students:"Students",academics:"Academics",attendance:"Attendance",placements:"Placements",data:"Data tools"};
+let cur="dashboard";
+const S={sq:"",sd:"",sort:"student_id",dir:1,page:0,ad:"",as:"",th:65};
+
+function nav(){
+  $("#rail").innerHTML=`<div class="brand">Campus Analytics<small>Performance &amp; placement</small></div>`+
+   Object.entries(VIEWS).map(([k,v])=>`<button class="nav" data-v="${k}" ${k===cur?'aria-current="page"':""}>${v}</button>`).join("")+
+   `<div class="spacer"></div><button class="nav" id="theme">Toggle theme</button>`;
+  $("#rail").querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>go(b.dataset.v));
+  $("#theme").onclick=()=>{const d=document.documentElement;const dark=css("color-scheme")==="dark"||d.dataset.theme==="dark"&&true;
+    const isDark=getComputedStyle(d).colorScheme==="dark";d.dataset.theme=isDark?"light":"dark";render()};
+}
+function go(v){cur=v;try{history.replaceState(null,"","#"+v)}catch(e){}nav();render();window.scrollTo(0,0)}
+function head(t,s,right=""){return `<div class="topbar"><div><h1>${t}</h1><p class="sub">${s}</p></div>${right}</div>`}
+
+function render(){killCharts();$("#view").innerHTML="";VIEW[cur]();}
+const VIEW={};
+
+VIEW.dashboard=()=>{
+  const st=DB.students,P=DB.placements,elig=P.length;
+  const held=sum(DB.attendance.map(a=>a.classes_held)),att=sum(DB.attendance.map(a=>a.classes_attended));
+  const placed=P.filter(p=>p.status==="Placed").length;
+  $("#view").innerHTML=head("Dashboard",`${st.length} students across ${DEPTS.length} departments`)+`
+  <div class="grid kpis">
+   <div class="kpi"><div class="l">Students</div><div class="v">${st.length}</div><div class="n">${st.filter(s=>s.placement_eligible).length} placement eligible</div></div>
+   <div class="kpi"><div class="l">Average CGPA</div><div class="v">${fmt(avg(st.map(s=>s.cgpa)),2)}</div><div class="n">out of 10</div></div>
+   <div class="kpi"><div class="l">Attendance</div><div class="v">${fmt(att/held*100)}%</div><div class="n">${att.toLocaleString("en-IN")} of ${held.toLocaleString("en-IN")} classes</div></div>
+   <div class="kpi"><div class="l">Placement rate</div><div class="v">${elig?fmt(placed/elig*100):"0.0"}%</div><div class="n">${placed} placed of ${elig} eligible</div></div>
+  </div>
+  <div class="grid two">
+   <div class="card"><h2>Average CGPA by department</h2><p class="hint">Hover a bar for the exact figure</p><div class="chart"><canvas id="c1"></canvas></div></div>
+   <div class="card"><h2>Attendance by department</h2><p class="hint">Share of classes attended</p><div class="chart"><canvas id="c2"></canvas></div></div>
+   <div class="card"><h2>Placement status</h2><p class="hint">Eligible students only</p><div class="chart"><canvas id="c3"></canvas></div></div>
+   <div class="card"><h2>Placement rate by department</h2><p class="hint">Placed ÷ eligible</p><div class="chart"><canvas id="c4"></canvas></div></div>
+  </div>`;
+  const by=groupBy(st,s=>s.department);
+  const labels=DEPTS.map(short);
+  mk("c1",bars(labels,DEPTS.map(d=>r2(avg((by.get(d)||[]).map(s=>s.cgpa)))),css("--c1"),{scales:{y:{min:0,max:10}}}));
+  const ab=groupBy(DB.attendance,a=>a.department);
+  mk("c2",bars(labels,DEPTS.map(d=>{const a=ab.get(d)||[];return r1(sum(a.map(x=>x.classes_attended))/Math.max(1,sum(a.map(x=>x.classes_held)))*100)}),css("--c3"),{scales:{y:{min:0,max:100,ticks:{callback:v=>v+"%"}}}}));
+  const sc=["Placed","In Process","Not Placed"],col=[css("--c3"),css("--c2"),css("--c6")];
+  mk("c3",{type:"doughnut",data:{labels:sc,datasets:[{data:sc.map(s=>P.filter(p=>p.status===s).length),backgroundColor:col,borderColor:css("--surface"),borderWidth:2}]},options:{cutout:"62%",plugins:{legend:{display:true,position:"bottom",labels:{usePointStyle:true,boxWidth:8}}}}});
+  const pb=groupBy(P,p=>p.department);
+  mk("c4",bars(labels,DEPTS.map(d=>{const a=pb.get(d)||[];return a.length?r1(a.filter(p=>p.status==="Placed").length/a.length*100):0}),css("--c1"),{scales:{y:{min:0,max:100,ticks:{callback:v=>v+"%"}}}}));
+};
+
+/* Students */
+VIEW.students=()=>{
+  $("#view").innerHTML=head("Students","Search the directory, sort any column, open a row for the full record")+`
+  <div class="filters">
+    <label>Search<input id="sq" placeholder="ID or name" value="${esc(S.sq)}"></label>
+    <label>Department<select id="sd"><option value="">All departments</option>${DEPTS.map(d=>`<option ${d===S.sd?"selected":""}>${d}</option>`).join("")}</select></label>
+  </div>
+  <div class="tw"><table><thead><tr id="sth"></tr></thead><tbody id="stb"></tbody></table></div>
+  <div class="pager" id="spg"></div>`;
+  $("#sq").oninput=e=>{S.sq=e.target.value;S.page=0;studentRows()};
+  $("#sd").onchange=e=>{S.sd=e.target.value;S.page=0;studentRows()};
+  studentRows();
+};
+const SCOLS=[["student_id","ID"],["name","Name"],["department","Department"],["batch","Batch","num"],["semester","Sem","num"],["cgpa","CGPA","num"],["placement_eligible","Eligible"]];
+function studentRows(){
+  const q=S.sq.toLowerCase();
+  let rows=DB.students.filter(s=>(!S.sd||s.department===S.sd)&&(!q||s.student_id.toLowerCase().includes(q)||s.name.toLowerCase().includes(q)));
+  rows.sort((a,b)=>{const x=a[S.sort],y=b[S.sort];return (x>y?1:x<y?-1:0)*S.dir});
+  const per=15,pages=Math.max(1,Math.ceil(rows.length/per));S.page=Math.min(S.page,pages-1);
+  $("#sth").innerHTML=SCOLS.map(([k,l,c])=>`<th class="s ${c||""}" data-k="${k}">${l}${S.sort===k?(S.dir>0?" ▲":" ▼"):""}</th>`).join("");
+  $("#sth").querySelectorAll("th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;S.dir=S.sort===k?-S.dir:1;S.sort=k;studentRows()});
+  $("#stb").innerHTML=rows.slice(S.page*per,S.page*per+per).map(s=>`<tr class="click" data-id="${s.student_id}"><td>${s.student_id}</td><td>${esc(s.name)}</td><td>${s.department}</td><td class="num">${s.batch}</td><td class="num">${s.semester}</td><td class="num">${fmt(s.cgpa,2)}</td><td><span class="pill ${s.placement_eligible?"good":"mute"}">${s.placement_eligible?"Eligible":"No"}</span></td></tr>`).join("")||`<tr><td colspan="7" class="note">No students match this search.</td></tr>`;
+  $("#stb").querySelectorAll("tr.click").forEach(tr=>tr.onclick=()=>openStudent(tr.dataset.id));
+  $("#spg").innerHTML=`<span>${rows.length} students · page ${S.page+1} of ${pages}</span><button class="btn" id="pp" ${S.page?"":"disabled"}>Previous</button><button class="btn" id="pn" ${S.page<pages-1?"":"disabled"}>Next</button>`;
+  $("#pp").onclick=()=>{S.page--;studentRows()};$("#pn").onclick=()=>{S.page++;studentRows()};
+}
+function openStudent(id){
+  const s=DB.students.find(x=>x.student_id===id);if(!s)return;
+  const ex=DB.exams.filter(x=>x.student_id===id),at=DB.attendance.filter(x=>x.student_id===id),pl=DB.placements.find(x=>x.student_id===id);
+  const row=(a,b)=>`<tr><td>${a}</td><td class="num">${b}</td></tr>`;
+  $("#drawerHost").innerHTML=`<div class="drawer" id="dr"><div class="panel" role="dialog" aria-label="Student record">
+   <div style="display:flex;justify-content:space-between;gap:8px"><div><h3>${esc(s.name)}</h3><div class="note">${s.student_id} · ${s.department}</div></div><button class="btn" id="dx">Close</button></div>
+   <h4>Profile</h4><div class="tw"><table><tbody>${row("Batch",s.batch)}${row("Semester",s.semester)}${row("CGPA",fmt(s.cgpa,2))}${row("Placement eligible",s.placement_eligible?"Yes":"No")}</tbody></table></div>
+   <h4>Examinations</h4><div class="tw"><table><tbody>${ex.map(e=>row(e.subject,`${e.marks_obtained}/${e.maximum_marks} <span class="pill ${e.result==="Pass"?"good":"bad"}">${e.result}</span>`)).join("")||row("No records","")}</tbody></table></div>
+   <h4>Attendance</h4><div class="tw"><table><tbody>${at.map(a=>row(a.subject,`${fmt(a.attendance_percentage)}% <span class="pill ${a.attendance_percentage<S.th?"bad":"good"}">${a.attendance_percentage<S.th?"Low":"OK"}</span>`)).join("")||row("No records","")}</tbody></table></div>
+   <h4>Placement</h4><div class="tw"><table><tbody>${pl?row("Status",pl.status)+(pl.company?row("Company",esc(pl.company))+row("Role",pl.job_role)+row("Package",lakh(pl.annual_salary)):""):row("Not in placement pool","")}</tbody></table></div>
+  </div></div>`;
+  const close=()=>$("#drawerHost").innerHTML="";
+  $("#dx").onclick=close;$("#dr").onclick=e=>{if(e.target.id==="dr")close()};
+}
+
+/* Academics */
+VIEW.academics=()=>{
+  $("#view").innerHTML=head("Academics","Examination results by department and subject")+`
+  <div class="filters">
+   <label>Department<select id="ad"><option value="">All departments</option>${DEPTS.map(d=>`<option ${d===S.ad?"selected":""}>${d}</option>`).join("")}</select></label>
+   <label>Semester<select id="as"><option value="">All semesters</option>${[3,4,5,6,7,8].map(n=>`<option value="${n}" ${String(n)===S.as?"selected":""}>Semester ${n}</option>`).join("")}</select></label>
+  </div><div id="acb"></div>`;
+  $("#ad").onchange=e=>{S.ad=e.target.value;acad()};$("#as").onchange=e=>{S.as=e.target.value;acad()};acad();
+};
+function acad(){
+  killCharts();
+  const ex=DB.exams.filter(e=>(!S.ad||e.department===S.ad)&&(!S.as||String(e.semester)===S.as));
+  const passN=ex.filter(e=>e.result==="Pass").length;
+  const bs=[...groupBy(ex,e=>e.subject)].map(([k,v])=>({k,avg:avg(v.map(x=>x.percentage)),n:v.length,pass:v.filter(x=>x.result==="Pass").length/v.length*100})).sort((a,b)=>b.avg-a.avg);
+  const bd=groupBy(ex,e=>e.department);
+  $("#acb").innerHTML=`<div class="grid kpis">
+   <div class="kpi"><div class="l">Records</div><div class="v">${ex.length}</div></div>
+   <div class="kpi"><div class="l">Average score</div><div class="v">${fmt(avg(ex.map(e=>e.percentage)))}%</div></div>
+   <div class="kpi"><div class="l">Pass rate</div><div class="v">${ex.length?fmt(passN/ex.length*100):"0.0"}%</div></div></div>
+   <div class="grid two"><div class="card"><h2>Average score by department</h2><p class="hint">Percent of maximum marks</p><div class="chart"><canvas id="a1"></canvas></div></div>
+   <div class="card"><h2>Subjects</h2><p class="hint">Sorted by average score</p><div class="tw" style="max-height:300px;overflow:auto"><table><thead><tr><th>Subject</th><th class="num">Avg</th><th class="num">Pass</th><th class="num">Records</th></tr></thead><tbody>${bs.map(b=>`<tr><td>${b.k}</td><td class="num">${fmt(b.avg)}%</td><td class="num">${fmt(b.pass)}%</td><td class="num">${b.n}</td></tr>`).join("")||`<tr><td colspan="4" class="note">No records for this filter.</td></tr>`}</tbody></table></div></div></div>`;
+  const dl=DEPTS.filter(d=>bd.has(d));
+  mk("a1",bars(dl.map(short),dl.map(d=>r1(avg(bd.get(d).map(x=>x.percentage)))),css("--c1"),{scales:{y:{min:0,max:100}}}));
+}
+
+/* Attendance */
+VIEW.attendance=()=>{
+  $("#view").innerHTML=head("Attendance","Find records that fall below the minimum requirement")+`
+  <div class="filters"><label>Threshold: <span id="thv" style="text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink)">${S.th}%</span><input id="th" type="range" min="40" max="90" value="${S.th}" style="min-width:220px;padding:0"></label></div><div id="atb"></div>`;
+  $("#th").oninput=e=>{S.th=+e.target.value;$("#thv").textContent=S.th+"%";att()};att();
+};
+function att(){
+  killCharts();
+  const low=DB.attendance.filter(a=>a.attendance_percentage<S.th).sort((a,b)=>a.attendance_percentage-b.attendance_percentage);
+  const nm=Object.fromEntries(DB.students.map(s=>[s.student_id,s.name]));
+  const bs=[...groupBy(DB.attendance,a=>a.subject)].map(([k,v])=>[k,sum(v.map(x=>x.classes_attended))/sum(v.map(x=>x.classes_held))*100]).sort((a,b)=>a[1]-b[1]);
+  $("#atb").innerHTML=`<div class="grid kpis"><div class="kpi"><div class="l">Below ${S.th}%</div><div class="v">${low.length}</div><div class="n">${fmt(low.length/DB.attendance.length*100)}% of ${DB.attendance.length} records</div></div>
+   <div class="kpi"><div class="l">Students affected</div><div class="v">${new Set(low.map(l=>l.student_id)).size}</div></div></div>
+   <div class="grid two"><div class="card"><h2>Attendance by subject</h2><p class="hint">Lowest first</p><div class="chart" style="height:340px"><canvas id="t1"></canvas></div></div>
+   <div class="card"><h2>Lowest attendance records</h2><p class="hint">Showing up to 30</p><div class="tw" style="max-height:340px;overflow:auto"><table><thead><tr><th>Student</th><th>Subject</th><th class="num">%</th></tr></thead><tbody>${low.slice(0,30).map(l=>`<tr class="click" data-id="${l.student_id}"><td>${esc(nm[l.student_id]||l.student_id)}<div class="note">${l.student_id}</div></td><td>${l.subject}</td><td class="num"><span class="pill bad">${fmt(l.attendance_percentage)}%</span></td></tr>`).join("")||`<tr><td colspan="3" class="note">No records fall below this threshold.</td></tr>`}</tbody></table></div></div></div>`;
+  $("#atb").querySelectorAll("tr.click").forEach(tr=>tr.onclick=()=>openStudent(tr.dataset.id));
+  mk("t1",{type:"bar",data:{labels:bs.map(b=>b[0]),datasets:[{data:bs.map(b=>r1(b[1])),backgroundColor:bs.map(b=>b[1]<S.th?css("--bad"):css("--c3")),borderRadius:3,maxBarThickness:20}]},options:{indexAxis:"y",scales:{x:{min:0,max:100,grid:{color:css("--grid")}},y:{grid:{color:"transparent"}}}}});
+}
+
+/* Placements */
+VIEW.placements=()=>{
+  const P=DB.placements,placed=P.filter(p=>p.status==="Placed"&&p.annual_salary>0);
+  const rec=[...groupBy(P.filter(p=>p.status==="Placed"&&p.company),p=>p.company)].map(([k,v])=>({k,n:v.length,avg:avg(v.map(x=>x.annual_salary))})).sort((a,b)=>b.n-a.n);
+  const roles=[...groupBy(placed,p=>p.job_role)].map(([k,v])=>[k,v.length]).sort((a,b)=>b[1]-a[1]);
+  $("#view").innerHTML=head("Placements","Outcomes for placement-eligible students")+`
+  <div class="grid kpis">
+   <div class="kpi"><div class="l">Placed</div><div class="v">${P.filter(p=>p.status==="Placed").length}</div><div class="n">of ${P.length} eligible</div></div>
+   <div class="kpi"><div class="l">Average package</div><div class="v">${lakh(avg(placed.map(p=>p.annual_salary)))}</div><div class="n">per year</div></div>
+   <div class="kpi"><div class="l">Highest package</div><div class="v">${lakh(Math.max(0,...placed.map(p=>p.annual_salary)))}</div><div class="n">per year</div></div>
+   <div class="kpi"><div class="l">Recruiters</div><div class="v">${rec.length}</div></div></div>
+  <div class="grid two">
+   <div class="card"><h2>Hires by recruiter</h2><p class="hint">Number of students placed</p><div class="chart" style="height:340px"><canvas id="p1"></canvas></div></div>
+   <div class="card"><h2>Recruiter summary</h2><p class="hint">Average annual package</p><div class="tw" style="max-height:340px;overflow:auto"><table><thead><tr><th>Company</th><th class="num">Hires</th><th class="num">Avg package</th></tr></thead><tbody>${rec.map(r=>`<tr><td>${r.k}</td><td class="num">${r.n}</td><td class="num">${lakh(r.avg)}</td></tr>`).join("")}</tbody></table></div></div>
+   <div class="card"><h2>Package distribution</h2><p class="hint">Students per ₹2 L band</p><div class="chart"><canvas id="p2"></canvas></div></div>
+   <div class="card"><h2>Roles</h2><p class="hint">Placed students by job role</p><div class="chart"><canvas id="p3"></canvas></div></div>
+  </div>`;
+  mk("p1",{type:"bar",data:{labels:rec.map(r=>r.k),datasets:[{data:rec.map(r=>r.n),backgroundColor:css("--c1"),borderRadius:3,maxBarThickness:18}]},options:{indexAxis:"y",scales:{x:{grid:{color:css("--grid")},ticks:{precision:0}},y:{grid:{color:"transparent"}}}}});
+  const bands=[3,5,7,9,11],bl=["3–5 L","5–7 L","7–9 L","9–11 L"];
+  mk("p2",bars(bl,[0,1,2,3].map(i=>placed.filter(p=>p.annual_salary>=bands[i]*1e5&&(p.annual_salary<bands[i+1]*1e5||(i===3&&p.annual_salary<=11e5))).length),css("--c2"),{scales:{y:{ticks:{precision:0}}}}));
+  mk("p3",{type:"bar",data:{labels:roles.map(r=>r[0]),datasets:[{data:roles.map(r=>r[1]),backgroundColor:css("--c3"),borderRadius:3,maxBarThickness:18}]},options:{indexAxis:"y",scales:{x:{grid:{color:css("--grid")},ticks:{precision:0}},y:{grid:{color:"transparent"}}}}});
+};
+
+/* Data tools: import / export (downloads are blocked in the viewer, so export is copy-to-clipboard) */
+const SCHEMA={
+ students:["student_id","name","department","batch","semester","cgpa","placement_eligible","active"],
+ attendance:["student_id","department","subject","academic_year","classes_held","classes_attended","attendance_percentage"],
+ examinations:["student_id","department","semester","subject","academic_year","marks_obtained","maximum_marks","percentage","result"],
+ placements:["student_id","department","batch","academic_year","company","job_role","status","annual_salary"]};
+const KEY={students:"students",attendance:"attendance",examinations:"exams",placements:"placements"};
+const NUMS=["batch","semester","cgpa","classes_held","classes_attended","attendance_percentage","marks_obtained","maximum_marks","percentage","annual_salary"];
+const BOOLS=["placement_eligible","active"];
+function toCSV(ds){const cols=SCHEMA[ds];const q=v=>/[",\n]/.test(v)?'"'+String(v).replace(/"/g,'""')+'"':v;return [cols.join(","),...DB[KEY[ds]].map(r=>cols.map(c=>q(r[c]??"")).join(","))].join("\n")}
+function parseCSV(t){const rows=[];let r=[],f="",inq=false;for(let i=0;i<t.length;i++){const c=t[i];if(inq){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else inq=false}else f+=c}else if(c=='"')inq=true;else if(c==","){r.push(f);f=""}else if(c=="\n"||c=="\r"){if(c=="\r"&&t[i+1]=="\n")i++;r.push(f);f="";if(r.some(x=>x.trim()))rows.push(r);r=[]}else f+=c}
+  r.push(f);if(r.some(x=>x.trim()))rows.push(r);return rows}
+const SAMPLE={
+ students:"student_id,name,department,batch,semester,cgpa,placement_eligible,active\nCE20250001,Aarav Patil,Computer Engineering,2025,5,7.4,false,true",
+ attendance:"student_id,department,subject,academic_year,classes_held,classes_attended,attendance_percentage\nCE20250001,Computer Engineering,Database Management Systems,2025-2026,30,25,83.3",
+ examinations:"student_id,department,semester,subject,academic_year,marks_obtained,maximum_marks,percentage,result\nCE20250001,Computer Engineering,5,Database Management Systems,2025-2026,78,100,78,Pass",
+ placements:"student_id,department,batch,academic_year,company,job_role,status,annual_salary\nCE20250001,Computer Engineering,2025,2026-2027,Example Technologies,Software Developer,Placed,500000"};
+const UKEYS={students:["student_id"],attendance:["student_id","subject","academic_year"],examinations:["student_id","semester","subject","academic_year"],placements:["student_id","academic_year"]};
+function importCSV(ds,text){
+  const rows=parseCSV(text);if(rows.length<2)return{err:"The file needs a header row and at least one data row."};
+  const head=rows[0].map(h=>h.trim()),need=SCHEMA[ds];const miss=need.filter(c=>!head.includes(c));
+  if(miss.length)return{err:"Missing columns: "+miss.join(", ")};
+  let added=0,updated=0;const bad=[];
+  rows.slice(1).forEach((r,i)=>{
+    const o={};head.forEach((h,j)=>o[h]=(r[j]??"").trim());
+    for(const n of NUMS)if(n in o&&need.includes(n)){const v=Number(o[n]);if(o[n]===""||isNaN(v)){bad.push(`Row ${i+2}: ${n} must be a number`);return}o[n]=v}
+    for(const b of BOOLS)if(b in o&&need.includes(b))o[b]=/^(true|1|yes)$/i.test(o[b]);
+    if(!o.student_id){bad.push(`Row ${i+2}: student_id is empty`);return}
+    const rec={};need.forEach(c=>rec[c]=o[c]);
+    const list=DB[KEY[ds]],ks=UKEYS[ds];const ix=list.findIndex(x=>ks.every(k=>x[k]===rec[k]));
+    if(ix>=0){list[ix]=rec;updated++}else{list.push(rec);added++}
+  });
+  return{added,updated,bad};
+}
+VIEW.data=()=>{
+  const ds=Object.keys(SCHEMA);
+  $("#view").innerHTML=head("Data tools","Import CSV files into the live dashboard, or copy the data out")+`
+  <div class="grid two">
+   <div class="card"><h2>Import</h2><p class="hint">Rows with an existing key are updated; new keys are added. Changes last until you reload the page.</p>
+    <div class="filters"><label>Dataset<select id="ids">${ds.map(d=>`<option>${d}</option>`).join("")}</select></label><label>CSV file<input id="ifile" type="file" accept=".csv,text/csv"></label></div>
+    <textarea id="itxt" spellcheck="false" aria-label="CSV text"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn" id="ism">Fill with template row</button><button class="btn primary" id="iok">Import</button></div>
+    <div id="imsg"></div></div>
+   <div class="card"><h2>Export</h2><p class="hint">Copies the CSV text to your clipboard.</p>
+    <div class="filters"><label>Dataset<select id="eds">${ds.map(d=>`<option>${d}</option>`).join("")}</select></label></div>
+    <div class="note" id="ecount"></div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><button class="btn primary" id="ecp">Copy CSV</button><button class="btn" id="esh">Show preview</button></div>
+    <textarea id="eprev" readonly hidden style="margin-top:10px" aria-label="Export preview"></textarea><div id="emsg"></div>
+    <h2 style="margin-top:22px">Sample data</h2><p class="hint">Reset to the generated 500-student demo set.</p>
+    <button class="btn" id="rst">Regenerate demo data</button></div>
+  </div>`;
+  const cnt=()=>$("#ecount").textContent=`${DB[KEY[$("#eds").value]].length.toLocaleString("en-IN")} rows`;cnt();$("#eds").onchange=()=>{cnt();$("#eprev").hidden=true};
+  $("#ism").onclick=()=>$("#itxt").value=SAMPLE[$("#ids").value];
+  $("#ids").onchange=()=>{};
+  $("#ifile").onchange=e=>{const f=e.target.files[0];if(!f)return;if(f.size>5*1024*1024){$("#imsg").innerHTML=`<div class="msg pill bad">File is over 5 MB.</div>`;return}const fr=new FileReader();fr.onload=()=>$("#itxt").value=fr.result;fr.readAsText(f)};
+  $("#iok").onclick=()=>{const r=importCSV($("#ids").value,$("#itxt").value);
+    $("#imsg").innerHTML=r.err?`<div class="msg" style="background:var(--bad-bg);color:var(--bad)">${esc(r.err)}</div>`:
+    `<div class="msg" style="background:var(--good-bg);color:var(--good)">${r.added} added, ${r.updated} updated${r.bad.length?`, ${r.bad.length} skipped`:""}.</div>`+(r.bad.length?`<div class="note" style="margin-top:6px">${r.bad.slice(0,5).map(esc).join("<br>")}</div>`:"")};
+  $("#ecp").onclick=async()=>{const t=toCSV($("#eds").value);try{await navigator.clipboard.writeText(t);$("#emsg").innerHTML=`<div class="msg" style="background:var(--good-bg);color:var(--good)">Copied.</div>`}catch(e){const p=$("#eprev");p.hidden=false;p.value=t;p.select();$("#emsg").innerHTML=`<div class="msg" style="background:var(--warn-bg);color:var(--warn)">Clipboard blocked. The text is selected below; press Ctrl+C.</div>`}};
+  $("#esh").onclick=()=>{const p=$("#eprev");p.hidden=false;p.value=toCSV($("#eds").value).split("\n").slice(0,40).join("\n")};
+  $("#rst").onclick=()=>{seedData();cnt();$("#emsg").innerHTML=`<div class="msg" style="background:var(--good-bg);color:var(--good)">Demo data regenerated.</div>`};
+};
+
+try{const h=location.hash.slice(1);if(VIEWS[h])cur=h}catch(e){}
+nav();render();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>render());
+</script>
+</html>
